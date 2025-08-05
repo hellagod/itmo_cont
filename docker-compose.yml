@@ -22,6 +22,20 @@ services:
       - ./.env
     depends_on:
       - db
+    command: python parser.py
+    restart: no
+
+  bot:
+    build: .
+    working_dir: /app
+    volumes:
+      - programs:/app/programs
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+    command: python bot.py
+
 volumes:
   pgdata: {}
   programs: {}

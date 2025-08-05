@@ -1,9 +1,11 @@
 import logging
 from typing import Dict
+
 from openai import OpenAI
 from sqlalchemy.orm import sessionmaker, Session
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
+
 from config import settings
 from db import Program, engine
 
@@ -15,6 +17,7 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 CHOOSING, BACKGROUND, INTERESTS, ASK = range(4)
 
+
 def get_programs() -> Dict[str, Program]:
     session: Session = SessionLocal()
     try:
@@ -24,6 +27,7 @@ def get_programs() -> Dict[str, Program]:
     finally:
         session.close()
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     keyboard = [["Рекомендовать программу"], ["Спросить о программе"]]
     await update.message.reply_text(
@@ -31,6 +35,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
     )
     return CHOOSING
+
 
 async def recommendation_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
@@ -40,10 +45,12 @@ async def recommendation_start(update: Update, context: ContextTypes.DEFAULT_TYP
     )
     return BACKGROUND
 
+
 async def background(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['background'] = update.message.text
     await update.message.reply_text("Какие темы и направления вас интересуют, какие цели после магистратуры?")
     return INTERESTS
+
 
 async def interests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['interests'] = update.message.text
@@ -51,7 +58,8 @@ async def interests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     bg = context.user_data['background']
     interests_text = context.user_data['interests']
     messages = [{"role": "system", "content": "Вы эксперт по магистерским программам ITMO."},
-                {"role": "user", "content": f"Академический фон абитуриента: {bg}\nИнтересы и цели: {interests_text}\n"}]
+                {"role": "user",
+                 "content": f"Академический фон абитуриента: {bg}\nИнтересы и цели: {interests_text}\n"}]
     for prog in programs.values():
         attrs = {
             'slug': prog.slug,
@@ -59,9 +67,7 @@ async def interests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             'title': prog.title,
             'exam_dates': prog.exam_dates,
             'admission_quotas': prog.admission_quotas,
-            'study_plan_url': prog.study_plan_url,
-            'study_plan_file': prog.study_plan_file,
-            'study_plan_text': prog.study_plan_text or ''
+            'study_plan_text': prog.study_plan_text[:-2000] or ''
         }
         info = '\n'.join(f"{k}: {v}" for k, v in attrs.items())
         messages.append({"role": "user", "content": info})
@@ -81,10 +87,12 @@ async def interests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
     return CHOOSING
 
+
 async def ask_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     await update.message.reply_text("Введите ваш вопрос по программе:", reply_markup=ReplyKeyboardRemove())
     return ASK
+
 
 async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     question = update.message.text
@@ -101,7 +109,8 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         }
         info += '\n'.join(f"{k}: {v}" for k, v in attrs.items()) + "\n---\n"
     prompt = f"{info}Вопрос: {question}"
-    messages = [{"role": "system", "content": "Вы эксперт по магистерским программам ITMO. Если вопрос не связан с программой, скажите об этом."},
+    messages = [{"role": "system",
+                 "content": "Вы эксперт по магистерским программам ITMO. Если вопрос не связан с программой, скажите об этом."},
                 {"role": "user", "content": prompt}]
     try:
         resp = client.chat.completions.create(model="gpt-4", messages=messages)
@@ -118,9 +127,11 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     )
     return CHOOSING
 
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Всего доброго!", reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
+
 
 def main():
     app = ApplicationBuilder().token(settings.TELEGRAM_BOT_TOKEN).build()
@@ -139,6 +150,7 @@ def main():
     )
     app.add_handler(conv)
     app.run_polling()
+
 
 if __name__ == '__main__':
     main()

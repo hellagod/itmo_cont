@@ -1,6 +1,7 @@
 pydantic
 pydantic-settings
 sqlalchemy
-psycopg2
+psycopg2-binary
 pdfplumber
 python-telegram-bot
+openai

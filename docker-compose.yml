@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:13
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  parser:
+    build: .
+    working_dir: /app
+    volumes:
+      - programs:/app/programs
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+volumes:
+  pgdata: {}
+  programs: {}
